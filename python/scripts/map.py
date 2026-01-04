@@ -47,18 +47,19 @@ def make_path(name, yz_points):
     curve.bevel_depth = PATH_THICKNESS
     curve.bevel_resolution = 3
     curve.resolution_u = 12
-    spline = curve.splines.new(type='NURBS')
-    spline.points.add(len(yz_points) - 1)
-    spline.use_endpoint_u = True
-    spline.order_u = min(4, len(yz_points))
+    spline = curve.splines.new(type='BEZIER')
+    spline.bezier_points.add(len(yz_points) - 1)
+    
+    # make them all straight lines
+    for bp in spline.bezier_points:
+        bp.handle_left_type="VECTOR"
+        bp.handle_right_type="VECTOR"
 
-    for p, (y, z) in zip(spline.points, yz_points):
-        p.co = (PATH_X * SCENE_SCALE, y * SCENE_SCALE, z * SCENE_SCALE, 1.0)
+    for p, (y, z) in zip(spline.bezier_points, yz_points):
+        p.co = (PATH_X * SCENE_SCALE, y * SCENE_SCALE, z * SCENE_SCALE)
 
     obj = bpy.data.objects.new(name + "_curve", curve)
     bpy.context.scene.collection.objects.link(obj)
-    # Hide path in final renders but keep it in viewport
-    #obj.hide_render = True
     return obj
 
 def attach_and_animate_on_path(obj, path_obj, start_frame=None, end_frame=None):
@@ -130,18 +131,38 @@ animation = range(0,368)
 starting_angle=90
 diff=0.172078312
 
-dot1 = make_dot((1.0, 0.0, 0.0, 1.0))
-dot2 = make_dot((0.0, 1.0, 0.0, 1.0))
-dot3 = make_dot((0.0, 0.0, 1.0, 1.0))
+dot1a = make_dot((1.0, 0.0, 0.0, 1.0))
+dot1b = make_dot((1.0, 0.0, 0.0, 1.0))
+dot1c = make_dot((1.0, 0.0, 0.0, 1.0))
+dot2a = make_dot((0.0, 1.0, 0.0, 1.0))
+dot2b = make_dot((0.0, 1.0, 0.0, 1.0))
+dot2c = make_dot((0.0, 1.0, 0.0, 1.0))
+dot3a = make_dot((0.0, 0.0, 1.0, 1.0))
+dot3b = make_dot((0.0, 0.0, 1.0, 1.0))
+dot3c = make_dot((0.0, 0.0, 1.0, 1.0))
 
-path1 = make_path("path1", [[0.1, 0.1], [0.2, 0.1], [0.18, 0.2], [0.3, 0.3]]) 
-path2 = make_path("path2", [[0.2, 0.1], [0.2, 0.2], [0.3, 0.4], [0.5, 0.3]]) 
-path3 = make_path("path3", [[0.43, 0.42], [0.25, 0.47], [0.34, 0.5], [0.3, -0.4]]) 
+path1a = make_path("path1a", [[0.3, -0.4], [0.35, -0.25], [0.37, -0.13], [0.41, 0.3], [0.65, 0.41], [0.86, 0.43]]) 
+path1b = make_path("path1b", [[0.2, -0.38], [0.35, -0.19], [0.47, -0.01], [0.54, 0.3], [0.67, 0.37], [0.87, 0.44]]) 
+path1c = make_path("path1c", [[-0.1, -0.29], [0.0, -0.19], [0.27, 0.0], [0.41, 0.2], [0.66, 0.4], [0.87, 0.42]]) 
+
+path2a = make_path("path2a", [[-0.76, -0.1], [-0.71, 0.2], [-0.61, 0.4], [0.3, 0.41], [0.82, 0.42]]) 
+path2b = make_path("path2b", [[-0.75, -0.2], [-0.68, -0.1], [-0.54, 0.0], [-0.1, 0.2], [0.42, 0.25], [0.65, 0.37], [0.88, 0.41]]) 
+path2c = make_path("path2c", [[-0.83, -0.26], [-0.63, -0.15], [-0.32, -0.05], [0.2, 0.1], [0.42, 0.15], [0.65, 0.27], [0.88, 0.41]])
+
+path3a = make_path("path3a", [[-0.43, -0.42], [-0.25, -0.32], [0.09, -0.025], [-0.3, 0.02], [0.39, 0.30], [0.8, 0.455]]) 
+path3b = make_path("path3b", [[-0.43, -0.41], [-0.35, -0.39], [-0.13, -0.04], [0.35, 0.3], [0.47, 0.38], [0.82, 0.43]]) 
+path3c = make_path("path3c", [[-0.47, -0.42], [-0.37, -0.32], [-0.02, -0.26], [0.23, 0.2], [0.55, 0.35], [0.85, 0.45]]) 
 
 # Attach dots to the path and animate along it over the scene duration
-attach_and_animate_on_path(dot1, path1)
-attach_and_animate_on_path(dot2, path2)
-attach_and_animate_on_path(dot3, path3)
+attach_and_animate_on_path(dot1a, path1a)
+attach_and_animate_on_path(dot1b, path1b)
+attach_and_animate_on_path(dot1c, path1c)
+attach_and_animate_on_path(dot2a, path2a)
+attach_and_animate_on_path(dot2b, path2b)
+attach_and_animate_on_path(dot2c, path2c)
+attach_and_animate_on_path(dot3a, path3a)
+attach_and_animate_on_path(dot3b, path3b)
+attach_and_animate_on_path(dot3c, path3c)
 
 # this is how an object iṡ attached to path
 # bpy.ops.object.parent_set(type='FOLLOW')

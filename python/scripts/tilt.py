@@ -33,9 +33,9 @@ bpy.data.scenes["Scene"].render.image_settings.media_type='VIDEO'
 bpy.data.scenes["Scene"].render.filepath = "/tmp/sentinel.blend"
 
 # general parameters
-animation = range(0,368)
+animation = range(0,366)
 starting_angle=90
-diff=0.172078312
+diff=0.198025
 
 for i in animation:
     camera.keyframe_insert("rotation_euler", index=0, frame=i)
