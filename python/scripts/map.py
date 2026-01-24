@@ -14,10 +14,11 @@ n180 = math.radians(180)
 
 # shared scale so dots and paths match visually
 SCENE_SCALE = 1.0
-DOT_RADIUS = 0.01 * SCENE_SCALE
-PATH_THICKNESS = DOT_RADIUS
+DOT_RADIUS = 0.001 * SCENE_SCALE
+PATH_THICKNESS = 0.001 * SCENE_SCALE
 DOT_X = 0.2
 PATH_X = 0.1
+CLIP_LENGTH = 48
 
 def make_dot(colour):
     bpy.ops.mesh.primitive_uv_sphere_add(
@@ -39,7 +40,35 @@ def make_dot(colour):
         obj.data.materials.append(mat)
     return obj
 
+def make_text(name, body, colour=(1.0, 1.0, 1.0, 1.0)):
+    bpy.ops.object.text_add(location=(0, 0, 0), rotation=(0, 0, 0))
+    obj = bpy.context.active_object
+    obj.name = name
+    obj.data.body = body
+    obj.data.size = 0.001 * SCENE_SCALE
+    obj.data.extrude = PATH_THICKNESS
+    obj.rotation_euler[0] = n090
+    obj.rotation_euler[1] = n000
+    obj.rotation_euler[2] = -n090
+
+    mat = bpy.data.materials.get("TextColour")
+    if mat is None:
+        mat = bpy.data.materials.new(name="TextColour")
+        mat.use_nodes = True
+        bsdf = mat.node_tree.nodes.get("Principled BSDF")
+        if bsdf:
+            bsdf.inputs[0].default_value = colour
+    if len(obj.data.materials) == 0:
+        obj.data.materials.append(mat)
+    else:
+        obj.data.materials[0] = mat
+    return obj
+
 def make_path(name, yz_points):
+    # validate input points are pairs (y, z)
+    for i, pt in enumerate(yz_points):
+        if not isinstance(pt, (list, tuple)) or len(pt) != 2:
+            raise ValueError(f"Each path point must be a pair (y, z); got {pt} at index {i}")
     # local X-plane for path placement
     curve = bpy.data.curves.new(name=name, type='CURVE')
     curve.dimensions = '3D'
@@ -60,6 +89,8 @@ def make_path(name, yz_points):
 
     obj = bpy.data.objects.new(name + "_curve", curve)
     bpy.context.scene.collection.objects.link(obj)
+    # Hide curve from final render but keep it in viewport
+    obj.hide_render = True
     return obj
 
 def attach_and_animate_on_path(obj, path_obj, start_frame=None, end_frame=None):
@@ -91,12 +122,12 @@ bpy.data.objects["Cube"].select_set(True)
 bpy.ops.object.delete()
 
 # insert the map
-bpy.ops.image.import_as_mesh_planes(files=[{"name": "example_map.png"}], directory="./imports/")
+bpy.ops.image.import_as_mesh_planes(files=[{"name": "edinburgh_midnight_blue_800_130_90.png"}],size_mode='DPI', directory="./imports/")
 
 # set up camera
 camera = bpy.data.objects["Camera"]
 # position first
-camera.location[0] = 3.0
+camera.location[0] = 0.22
 camera.location[1] = 0.0
 camera.location[2] = 0.0
 # then angle
@@ -123,46 +154,54 @@ light.rotation_euler[2] = 0.0
 # set up output
 bpy.data.scenes["Scene"].render.resolution_x=3840
 bpy.data.scenes["Scene"].render.resolution_y=2160
-bpy.data.scenes["Scene"].frame_end=368
+bpy.data.scenes["Scene"].frame_end=CLIP_LENGTH
 bpy.data.scenes["Scene"].render.image_settings.media_type='VIDEO'
 
 # general parameters
-animation = range(0,368)
+animation = range(0,CLIP_LENGTH)
 starting_angle=90
 diff=0.172078312
 
 dot1a = make_dot((1.0, 0.0, 0.0, 1.0))
-dot1b = make_dot((1.0, 0.0, 0.0, 1.0))
-dot1c = make_dot((1.0, 0.0, 0.0, 1.0))
-dot2a = make_dot((0.0, 1.0, 0.0, 1.0))
-dot2b = make_dot((0.0, 1.0, 0.0, 1.0))
-dot2c = make_dot((0.0, 1.0, 0.0, 1.0))
-dot3a = make_dot((0.0, 0.0, 1.0, 1.0))
-dot3b = make_dot((0.0, 0.0, 1.0, 1.0))
-dot3c = make_dot((0.0, 0.0, 1.0, 1.0))
+# dot1b = make_dot((1.0, 0.0, 0.0, 1.0))
+# dot1c = make_dot((1.0, 0.0, 0.0, 1.0))
+# dot2a = make_dot((0.0, 1.0, 0.0, 1.0))
+# dot2b = make_dot((0.0, 1.0, 0.0, 1.0))
+# dot2c = make_dot((0.0, 1.0, 0.0, 1.0))
+# dot3a = make_dot((0.0, 0.0, 1.0, 1.0))
+# dot3b = make_dot((0.0, 0.0, 1.0, 1.0))
+# dot3c = make_dot((0.0, 0.0, 1.0, 1.0))
 
-path1a = make_path("path1a", [[0.3, -0.4], [0.35, -0.25], [0.37, -0.13], [0.41, 0.3], [0.65, 0.41], [0.86, 0.43]]) 
-path1b = make_path("path1b", [[0.2, -0.38], [0.35, -0.19], [0.47, -0.01], [0.54, 0.3], [0.67, 0.37], [0.87, 0.44]]) 
-path1c = make_path("path1c", [[-0.1, -0.29], [0.0, -0.19], [0.27, 0.0], [0.41, 0.2], [0.66, 0.4], [0.87, 0.42]]) 
+# create number text and animate along path_text
+num_text = make_text("text_5498", "5498", (1.0, 0.0, 0.0, 1.0))
 
-path2a = make_path("path2a", [[-0.76, -0.1], [-0.71, 0.2], [-0.61, 0.4], [0.3, 0.41], [0.82, 0.42]]) 
-path2b = make_path("path2b", [[-0.75, -0.2], [-0.68, -0.1], [-0.54, 0.0], [-0.1, 0.2], [0.42, 0.25], [0.65, 0.37], [0.88, 0.41]]) 
-path2c = make_path("path2c", [[-0.83, -0.26], [-0.63, -0.15], [-0.32, -0.05], [0.2, 0.1], [0.42, 0.15], [0.65, 0.27], [0.88, 0.41]])
+path1a = make_path("path1a", [[-0.03, -0.03], [-0.015, -0.03], [-0.015, -0.015], [0.0, -0.015], [0.0, 0.0], [0.015, 0.0], [0.015, 0.015], [0.03, 0.015], [0.03, 0.03]]) 
 
-path3a = make_path("path3a", [[-0.43, -0.42], [-0.25, -0.32], [0.09, -0.025], [-0.3, 0.02], [0.39, 0.30], [0.8, 0.455]]) 
-path3b = make_path("path3b", [[-0.43, -0.41], [-0.35, -0.39], [-0.13, -0.04], [0.35, 0.3], [0.47, 0.38], [0.82, 0.43]]) 
-path3c = make_path("path3c", [[-0.47, -0.42], [-0.37, -0.32], [-0.02, -0.26], [0.23, 0.2], [0.55, 0.35], [0.85, 0.45]]) 
+path_text = make_path("path text", [[0.024, -0.02], [0.017, -0.028], [0.0, -0.02], [0.01, -0.01], [0.015, -0.017], [-0.024, -0.026]]) 
+
+# path1b = make_path("path1b", [[0.2, -0.38], [0.35, -0.19], [0.47, -0.01], [0.54, 0.3], [0.67, 0.37], [0.87, 0.44]]) 
+# path1c = make_path("path1c", [[-0.1, -0.29], [0.0, -0.19], [0.27, 0.0], [0.41, 0.2], [0.66, 0.4], [0.87, 0.42]]) 
+
+# path2a = make_path("path2a", [[-0.76, -0.1], [-0.71, 0.2], [-0.61, 0.4], [0.3, 0.41], [0.82, 0.42]]) 
+# path2b = make_path("path2b", [[-0.75, -0.2], [-0.68, -0.1], [-0.54, 0.0], [-0.1, 0.2], [0.42, 0.25], [0.65, 0.37], [0.88, 0.41]]) 
+# path2c = make_path("path2c", [[-0.83, -0.26], [-0.63, -0.15], [-0.32, -0.05], [0.2, 0.1], [0.42, 0.15], [0.65, 0.27], [0.88, 0.41]])
+
+# path3a = make_path("path3a", [[-0.43, -0.42], [-0.25, -0.32], [0.09, -0.025], [-0.3, 0.02], [0.39, 0.30], [0.8, 0.455]]) 
+# path3b = make_path("path3b", [[-0.43, -0.41], [-0.35, -0.39], [-0.13, -0.04], [0.35, 0.3], [0.47, 0.38], [0.82, 0.43]]) 
+# path3c = make_path("path3c", [[-0.47, -0.42], [-0.37, -0.32], [-0.02, -0.26], [0.23, 0.2], [0.55, 0.35], [0.85, 0.45]]) 
 
 # Attach dots to the path and animate along it over the scene duration
 attach_and_animate_on_path(dot1a, path1a)
-attach_and_animate_on_path(dot1b, path1b)
-attach_and_animate_on_path(dot1c, path1c)
-attach_and_animate_on_path(dot2a, path2a)
-attach_and_animate_on_path(dot2b, path2b)
-attach_and_animate_on_path(dot2c, path2c)
-attach_and_animate_on_path(dot3a, path3a)
-attach_and_animate_on_path(dot3b, path3b)
-attach_and_animate_on_path(dot3c, path3c)
+# attach_and_animate_on_path(dot1b, path1b)
+# attach_and_animate_on_path(dot1c, path1c)
+# attach_and_animate_on_path(dot2a, path2a)
+# attach_and_animate_on_path(dot2b, path2b)
+# attach_and_animate_on_path(dot2c, path2c)
+# attach_and_animate_on_path(dot3a, path3a)
+# attach_and_animate_on_path(dot3b, path3b)
+# attach_and_animate_on_path(dot3c, path3c)
+
+attach_and_animate_on_path(num_text, path_text)
 
 # this is how an object iṡ attached to path
 # bpy.ops.object.parent_set(type='FOLLOW')
