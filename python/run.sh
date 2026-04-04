@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ---- configuration ----
-BLENDER="../../blender-5.0.1-linux-x64/blender"
+BLENDER="/usr/local/blender/blender"
 SCRIPTS_DIR="./scripts"
 # -----------------------
 
