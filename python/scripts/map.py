@@ -1,7 +1,10 @@
 import bpy
 import bpy_extras
+import json
 import math
 import mathutils
+import os
+import sys
 
 from bpy_extras import image_utils
 
@@ -70,26 +73,48 @@ n180 = math.radians(180)
 # define some helper fns
 
 # shared scale so text and paths match visually
-SCENE_SCALE = 1.0
-PATH_THICKNESS = 0.001 * SCENE_SCALE
-DOT_X = 0.2
-PATH_X = 0.1
-CLIP_LENGTH = 144
+_config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config", "master.json")
+with open(_config_path, "r") as _f:
+    _cfg = json.load(_f)
+
+SCENE_SCALE             = _cfg["SCENE_SCALE"]
+PATH_THICKNESS          = 0.001 * SCENE_SCALE
+DOT_X                   = _cfg["DOT_X"]
+PATH_X                  = _cfg["PATH_X"]
 
 # ---- Render/preview tuning (simple parameters) ----
 # Color management
-VIEW_TRANSFORM = 'Standard'   # fallback to 'Filmic' if unavailable
-VIEW_LOOK      = 'Medium High Contrast'
-VIEW_EXPOSURE  = 0.25
+VIEW_TRANSFORM          = _cfg["VIEW_TRANSFORM"]    # fallback to 'Filmic' if unavailable
+VIEW_LOOK               = _cfg["VIEW_LOOK"]
+VIEW_EXPOSURE           = _cfg["VIEW_EXPOSURE"]
 
-# Map material vividness
-# MAP_IMAGE_NAME          = 'edinburgh_midnight_blue_800_130_90.png'
-MAP_IMAGE_NAME        = 'edinburgh_forest_800_130_90.png'
-# MAP_IMAGE_NAME        = 'edinburgh_contrast_zones_2400_130_90.png'
-MAP_EMISSION_STRENGTH   = 1.7   # raise for brighter unlit colors (e.g., 1.8–2.2)
+MAP_EMISSION_STRENGTH   = _cfg["MAP_EMISSION_STRENGTH"]   # raise for brighter unlit colors (e.g., 1.8–2.2)
 
-GROUND_DRONE_COLOUR     = (1.0, 0.0, 0.0, 1.0)
-HELICOPTER_DRONE_COLOUR = (0.0, 0.0, 1.0, 1.0)
+GROUND_DRONE_COLOUR     = tuple(_cfg["GROUND_DRONE_COLOUR"])
+HELICOPTER_DRONE_COLOUR = tuple(_cfg["HELICOPTER_DRONE_COLOUR"])
+
+
+# Shot config — name passed after '--' on the Blender command line, e.g.:
+#   blender --background --python map.py -- shot_1
+_config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config")
+try:
+    _argv = sys.argv[sys.argv.index("--") + 1:]
+except ValueError:
+    _argv = []
+if not _argv:
+    raise SystemExit("Usage: blender --background --python map.py -- <shot_name>  (e.g. shot_1)")
+_shot_name = _argv[0]
+_shot_config_path = os.path.join(_config_dir, f"{_shot_name}.json")
+with open(_shot_config_path, "r") as _f:
+    _shot = json.load(_f)
+
+MAP_IMAGE_NAME = _shot["MAP_IMAGE_NAME"]
+CLIP_LENGTH    = _shot["CLIP_LENGTH"]
+
+_colour_map = {
+    "GROUND_DRONE_COLOUR":     GROUND_DRONE_COLOUR,
+    "HELICOPTER_DRONE_COLOUR": HELICOPTER_DRONE_COLOUR,
+}
 
 def make_text(name, body, colour, emission_strength=2.0):
     bpy.ops.object.text_add(location=(0, 0, 0), rotation=(0, 0, 0))
@@ -245,25 +270,12 @@ animation = range(0,CLIP_LENGTH)
 starting_angle=90
 diff=0.172078312
 
-# create number text and animate along path_text
-num_text1 = make_text("text_1", "🚚5498", GROUND_DRONE_COLOUR)
-num_text2 = make_text("text_2", "🚚3341", GROUND_DRONE_COLOUR)
-num_text3 = make_text("text_3", "🚚0440", GROUND_DRONE_COLOUR)
-num_text4 = make_text("text_4", "🚁198", HELICOPTER_DRONE_COLOUR)
-num_text5 = make_text("text_5", "🚁379", HELICOPTER_DRONE_COLOUR)
-
-path_text1 = make_path("path text1", [[0.01,    0.00], [0.01,   -0.008], [0.0,    -0.009]]) 
-path_text2 = make_path("path text2", [[0.03,    0.01], [0.032,   0.006], [0.034,   0.012]]) 
-path_text3 = make_path("path text3", [[-0.01,  -0.00], [-0.012, -0.002], [-0.018, -0.003]]) 
-path_text4 = make_path("path text4", [[0.02,    0.01], [0.0,    -0.003]]) 
-path_text5 = make_path("path text5", [[-0.01,  -0.02], [-0.04,  -0.009]]) 
-
-# attach to paths
-attach_and_animate_on_path(num_text1, path_text1, follow_orientation=False)
-attach_and_animate_on_path(num_text2, path_text2, follow_orientation=False)
-attach_and_animate_on_path(num_text3, path_text3, follow_orientation=False)
-attach_and_animate_on_path(num_text4, path_text4, follow_orientation=False)
-attach_and_animate_on_path(num_text5, path_text5, follow_orientation=False)
+# create number text and paths from shot config, then animate
+for i, entity in enumerate(_shot["entities"], start=1):
+    colour = _colour_map[entity["colour"]]
+    num_text = make_text(f"text_{i}", entity["label"], colour)
+    path_obj = make_path(f"path text{i}", entity["path"])
+    attach_and_animate_on_path(num_text, path_obj, follow_orientation=False)
 
 # this is how an object iṡ attached to path
 # bpy.ops.object.parent_set(type='FOLLOW')
