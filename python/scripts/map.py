@@ -5,6 +5,10 @@ import mathutils
 
 from bpy_extras import image_utils
 
+# set the output path
+
+bpy.data.scenes["Scene"].render.filepath = "/Volumes/Extreme SSD/Renders/Animated Maps/"
+
 # Color management and material helpers
 def set_vivid_color_management(view_transform='Standard', look='Medium High Contrast', exposure=0.25):
     scene = bpy.context.scene
@@ -27,7 +31,7 @@ def make_image_plane_vivid(image_name, emission_strength=1.5):
             continue
         nodes = mat.node_tree.nodes
         links = mat.node_tree.links
-        img_nodes = [n for n in nodes if n.type == 'TEX_IMAGE' and n.image == target_img]
+        img_nodes = [n for n in nodes if n.type == 'TEXT_IMAGE' and n.image == target_img]
         if not img_nodes:
             continue
         img_node = img_nodes[0]
@@ -79,10 +83,10 @@ VIEW_LOOK      = 'Medium High Contrast'
 VIEW_EXPOSURE  = 0.25
 
 # Map material vividness
-MAP_IMAGE_NAME          = 'edinburgh_midnight_blue_800_130_90.png'
-# MAP_IMAGE_NAME        = 'edinburgh_forest_800_130_90.png''
+# MAP_IMAGE_NAME          = 'edinburgh_midnight_blue_800_130_90.png'
+MAP_IMAGE_NAME        = 'edinburgh_forest_800_130_90.png'
 # MAP_IMAGE_NAME        = 'edinburgh_contrast_zones_2400_130_90.png'
-MAP_EMISSION_STRENGTH   = 1.3   # raise for brighter unlit colors (e.g., 1.8–2.2)
+MAP_EMISSION_STRENGTH   = 1.7   # raise for brighter unlit colors (e.g., 1.8–2.2)
 
 GROUND_DRONE_COLOUR     = (1.0, 0.0, 0.0, 1.0)
 HELICOPTER_DRONE_COLOUR = (0.0, 0.0, 1.0, 1.0)
