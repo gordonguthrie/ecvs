@@ -1,7 +1,7 @@
 import bpy
 import json
 
-OUTPUT_PATH = "./paths.json"
+OUTPUT_PATH = "C:\\tmp\\paths.json"
 
 all_paths = {}
 
