@@ -1,6 +1,6 @@
 {
-    "MAP_IMAGE_NAME": "edinburgh_forest_800_130_90.png",
-    "CLIP_LENGTH": 144,
+    "MAP_IMAGE_NAME": "edinburgh_contrast_zones_4500-13.0-9.0_shot_11.png",
+    "CLIP_LENGTH": 30,
     "devices": [
         {"label": "\ud83d\ude9a5498", "colour": "GROUND_DRONE_COLOUR"},
         {"label": "\ud83d\ude9a3341", "colour": "GROUND_DRONE_COLOUR"},

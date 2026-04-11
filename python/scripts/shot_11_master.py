@@ -1,19 +1,17 @@
 import bpy
 import bpy_extras
-import json
 import math
 import mathutils
-import os
-import sys
 
 from bpy_extras import image_utils
 
-# set the output path after config/shot are loaded
+# set the output path
+
+bpy.data.scenes["Scene"].render.filepath = "/Volumes/Extreme SSD/Renders/Animated Maps/"
 
 # Color management and material helpers
 def set_vivid_color_management(view_transform='Standard', look='Medium High Contrast', exposure=0.25):
     scene = bpy.context.scene
-    scene.display_settings.display_device = 'sRGB'
     vs = scene.view_settings
     try:
         vs.view_transform = view_transform
@@ -22,11 +20,9 @@ def set_vivid_color_management(view_transform='Standard', look='Medium High Cont
         vs.view_transform = 'Filmic'
     vs.look = look
     vs.exposure = exposure
-    if hasattr(vs, "gamma"):
-        vs.gamma = 1.0
 
 def make_image_plane_vivid(image_name, emission_strength=1.5):
-    # Rebuild the imported plane material as emission-only so lighting cannot dull the image
+    # Find the material that uses the given image, then drive Emission for unlit vivid colors
     target_img = bpy.data.images.get(image_name)
     if not target_img:
         return
@@ -34,29 +30,27 @@ def make_image_plane_vivid(image_name, emission_strength=1.5):
         if not mat.use_nodes:
             continue
         nodes = mat.node_tree.nodes
-        img_nodes = [n for n in nodes if n.type == 'TEX_IMAGE' and n.image == target_img]
+        links = mat.node_tree.links
+        img_nodes = [n for n in nodes if n.type == 'TEXT_IMAGE' and n.image == target_img]
         if not img_nodes:
             continue
+        img_node = img_nodes[0]
+        # Ensure we have an output and an emission shader
+        out = next((n for n in nodes if n.type == 'OUTPUT_MATERIAL'), None)
+        if out is None:
+            out = nodes.new('ShaderNodeOutputMaterial')
+        emission = next((n for n in nodes if n.type == 'EMISSION'), None)
+        if emission is None:
+            emission = nodes.new('ShaderNodeEmission')
+        emission.inputs['Strength'].default_value = emission_strength
+        # Link image color -> emission color, emission -> output
         try:
-            target_img.colorspace_settings.name = 'sRGB'
+            links.new(img_node.outputs['Color'], emission.inputs['Color'])
         except Exception:
             pass
-
-        nodes.clear()
-        links = mat.node_tree.links
-
-        tex = nodes.new('ShaderNodeTexImage')
-        tex.image = target_img
-        tex.interpolation = 'Linear'
-
-        emission = nodes.new('ShaderNodeEmission')
-        emission.inputs['Strength'].default_value = emission_strength
-
-        out = nodes.new('ShaderNodeOutputMaterial')
-
-        links.new(tex.outputs['Color'], emission.inputs['Color'])
+        # If there's an existing BSDF, we can bypass it for a pure unlit look
         links.new(emission.outputs['Emission'], out.inputs['Surface'])
-
+        # Optional: set blend mode to opaque to avoid unintended alpha darkening
         mat.blend_method = 'OPAQUE'
         break
 
@@ -76,78 +70,26 @@ n180 = math.radians(180)
 # define some helper fns
 
 # shared scale so text and paths match visually
-_config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config", "master.json")
-with open(_config_path, "r") as _f:
-    _cfg = json.load(_f)
-
-SCENE_SCALE             = _cfg["SCENE_SCALE"]
-PATH_THICKNESS          = 0.001 * SCENE_SCALE
-DOT_X                   = _cfg["DOT_X"]
-PATH_X                  = _cfg["PATH_X"]
+SCENE_SCALE = 1.0
+PATH_THICKNESS = 0.001 * SCENE_SCALE
+DOT_X = 0.2
+PATH_X = 0.1
+CLIP_LENGTH = 144
 
 # ---- Render/preview tuning (simple parameters) ----
-# Color management (forced)
-VIEW_TRANSFORM          = "Standard"
-VIEW_LOOK               = "None"
-VIEW_EXPOSURE           = 0.0
+# Color management
+VIEW_TRANSFORM = 'Standard'   # fallback to 'Filmic' if unavailable
+VIEW_LOOK      = 'Medium High Contrast'
+VIEW_EXPOSURE  = 0.25
 
-MAP_EMISSION_STRENGTH   = _cfg["MAP_EMISSION_STRENGTH"]   # raise for brighter unlit colors (e.g., 1.8–2.2)
-GROUND_DRONE_COLOUR     = tuple(_cfg["GROUND_DRONE_COLOUR"])
-HELICOPTER_DRONE_COLOUR = tuple(_cfg["HELICOPTER_DRONE_COLOUR"])
-RENDER_OUTPUT_DIR       = _cfg["RENDER_OUTPUT_DIR"]
+# Map material vividness
+# MAP_IMAGE_NAME          = 'edinburgh_midnight_blue_800_130_90.png'
+ MAP_IMAGE_NAME        = 'edinburgh_forest_800_130_90.png'
+# MAP_IMAGE_NAME        = 'edinburgh_contrast_zones_2400_130_90.png'
+MAP_EMISSION_STRENGTH   = 1.7   # raise for brighter unlit colors (e.g., 1.8–2.2)
 
-
-# Shot config — name passed after '--' on the Blender command line, e.g.:
-#   blender --background --python map.py -- shot_1
-_config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config")
-try:
-    _argv = sys.argv[sys.argv.index("--") + 1:]
-except ValueError:
-    _argv = []
-if not _argv:
-    raise SystemExit("Usage: blender --background --python map.py -- <shot_name>  (e.g. shot_1)")
-_shot_name = _argv[0]
-_shot_config_path = os.path.join(_config_dir, f"{_shot_name}.json")
-with open(_shot_config_path, "r") as _f:
-    _shot = json.load(_f)
-
-
-def build_entities_from_config(shot_config):
-    if "entities" in shot_config:
-        return shot_config["entities"]
-
-    devices = shot_config.get("devices", [])
-    paths = shot_config.get("paths", [])
-
-    if len(devices) != len(paths):
-        raise ValueError(
-            f"Shot config has {len(devices)} devices but {len(paths)} paths; they must match"
-        )
-
-    entities = []
-    for device, path_entry in zip(devices, paths):
-        if not isinstance(path_entry, dict) or len(path_entry) != 1:
-            raise ValueError(
-                f"Each path entry must be a single-key object like {{\"path_1\": [[...]]}}; got {path_entry}"
-            )
-        _, yz_points = next(iter(path_entry.items()))
-        entity = dict(device)
-        entity["path"] = yz_points
-        entities.append(entity)
-
-    return entities
-
-_render_base = os.path.abspath(RENDER_OUTPUT_DIR)
-bpy.data.scenes["Scene"].render.filepath = os.path.join(_render_base, _shot_name)
-
-MAP_IMAGE_NAME = _shot["MAP_IMAGE_NAME"]
-CLIP_LENGTH    = _shot["CLIP_LENGTH"]
-ENTITIES       = build_entities_from_config(_shot)
-
-_colour_map = {
-    "GROUND_DRONE_COLOUR":     GROUND_DRONE_COLOUR,
-    "HELICOPTER_DRONE_COLOUR": HELICOPTER_DRONE_COLOUR,
-}
+GROUND_DRONE_COLOUR     = (1.0, 0.0, 0.0, 1.0)
+HELICOPTER_DRONE_COLOUR = (0.0, 0.0, 1.0, 1.0)
 
 def make_text(name, body, colour, emission_strength=2.0):
     bpy.ops.object.text_add(location=(0, 0, 0), rotation=(0, 0, 0))
@@ -166,10 +108,12 @@ def make_text(name, body, colour, emission_strength=2.0):
     if mat is None:
         mat = bpy.data.materials.new(name=mat_name)
         mat.use_nodes = True
+    bsdf = mat.node_tree.nodes.get("Principled BSDF")
+    if bsdf:
+        bsdf.inputs[0].default_value = colour
+    # Add Emission shader and combine with BSDF for vivid text
     nodes = mat.node_tree.nodes
     links = mat.node_tree.links
-    for link in list(links):
-        links.remove(link)
     # Ensure output node exists
     out = next((n for n in nodes if n.type == 'OUTPUT_MATERIAL'), None)
     if out is None:
@@ -179,8 +123,19 @@ def make_text(name, body, colour, emission_strength=2.0):
         emission = nodes.new('ShaderNodeEmission')
     emission.inputs['Color'].default_value = colour
     emission.inputs['Strength'].default_value = emission_strength
-    links.new(emission.outputs['Emission'], out.inputs['Surface'])
-    mat.blend_method = 'OPAQUE'
+    add_shader = next((n for n in nodes if n.type == 'ADD_SHADER'), None)
+    if add_shader is None:
+        add_shader = nodes.new('ShaderNodeAddShader')
+    if bsdf:
+        try:
+            links.new(bsdf.outputs['BSDF'], add_shader.inputs[0])
+        except Exception:
+            pass
+    try:
+        links.new(emission.outputs['Emission'], add_shader.inputs[1])
+    except Exception:
+        pass
+    links.new(add_shader.outputs['Shader'], out.inputs['Surface'])
     # Assign/replace material slot 0
     if len(obj.data.materials) == 0:
         obj.data.materials.append(mat)
@@ -284,25 +239,35 @@ bpy.data.scenes["Scene"].render.resolution_x=3840
 bpy.data.scenes["Scene"].render.resolution_y=2160
 bpy.data.scenes["Scene"].frame_end=CLIP_LENGTH
 bpy.data.scenes["Scene"].render.image_settings.media_type='VIDEO'
-bpy.data.scenes["Scene"].render.use_overwrite = True
 
 # general parameters
 animation = range(0,CLIP_LENGTH)
 starting_angle=90
 diff=0.172078312
 
-# create number text and paths from shot config, then animate
-for i, entity in enumerate(ENTITIES, start=1):
-    colour = _colour_map[entity["colour"]]
-    num_text = make_text(f"text_{i}", entity["label"], colour)
-    path_obj = make_path(f"path text{i}", entity["path"])
-    attach_and_animate_on_path(num_text, path_obj, follow_orientation=False)
+# create number text and animate along path_text
+num_text1 = make_text("text_1", "🚚5498", GROUND_DRONE_COLOUR)
+num_text2 = make_text("text_2", "🚚3341", GROUND_DRONE_COLOUR)
+num_text3 = make_text("text_3", "🚚0440", GROUND_DRONE_COLOUR)
+num_text4 = make_text("text_4", "🚁198", HELICOPTER_DRONE_COLOUR)
+num_text5 = make_text("text_5", "🚁379", HELICOPTER_DRONE_COLOUR)
+
+path_text1 = make_path("path text1", [[0.01,    0.00], [0.01,   -0.008], [0.0,    -0.009]]) 
+path_text2 = make_path("path text2", [[0.03,    0.01], [0.032,   0.006], [0.034,   0.012]]) 
+path_text3 = make_path("path text3", [[-0.01,  -0.00], [-0.012, -0.002], [-0.018, -0.003]]) 
+path_text4 = make_path("path text4", [[0.02,    0.01], [0.0,    -0.003]]) 
+path_text5 = make_path("path text5", [[-0.01,  -0.02], [-0.04,  -0.009]]) 
+
+# attach to paths
+attach_and_animate_on_path(num_text1, path_text1, follow_orientation=False)
+attach_and_animate_on_path(num_text2, path_text2, follow_orientation=False)
+attach_and_animate_on_path(num_text3, path_text3, follow_orientation=False)
+attach_and_animate_on_path(num_text4, path_text4, follow_orientation=False)
+attach_and_animate_on_path(num_text5, path_text5, follow_orientation=False)
 
 # this is how an object iṡ attached to path
 # bpy.ops.object.parent_set(type='FOLLOW')
 
 # pack all outputs into the file and save output
 bpy.ops.file.pack_all()
-_blend_path = os.path.join("./outputs", f"map_{_shot_name}.blend")
-bpy.context.preferences.filepaths.save_version = 0
-bpy.ops.wm.save_as_mainfile(filepath=_blend_path, check_existing=False)
+bpy.ops.wm.save_as_mainfile(filepath="./outputs/map.blend")
