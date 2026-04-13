@@ -1,6 +1,6 @@
 {
-    "MAP_IMAGE_NAME": "edinburgh_contrast_zones_4500-13.0-9.0_shot_11.png",
-    "CLIP_LENGTH": 34,
+    "MAP_IMAGE_NAME": "edinburgh_contrast_zones_4500-13.0-9.0_shot_5.png",
+    "CLIP_LENGTH": 28,
     "TIME_OF_DAY": "day",
     "devices": [
         {"label": "8411",  "colour": "HELICOPTER_DRONE_COLOUR"},
@@ -34,7 +34,6 @@
         {"label": "8601", "colour": "GROUND_DRONE_COLOUR"},
         {"label": "6345", "colour": "GROUND_DRONE_COLOUR"},
         {"label": "8217", "colour": "GROUND_DRONE_COLOUR"}
-
     ],
     "paths":
 [
