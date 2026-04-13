@@ -81,7 +81,7 @@ with open(_config_path, "r") as _f:
     _cfg = json.load(_f)
 
 SCENE_SCALE             = _cfg["SCENE_SCALE"]
-PATH_THICKNESS          = 0.001 * SCENE_SCALE
+PATH_THICKNESS          = 0.003 * SCENE_SCALE
 DOT_X                   = _cfg["DOT_X"]
 PATH_X                  = _cfg["PATH_X"]
 
@@ -92,8 +92,6 @@ VIEW_LOOK               = "None"
 VIEW_EXPOSURE           = 0.0
 
 MAP_EMISSION_STRENGTH   = _cfg["MAP_EMISSION_STRENGTH"]   # raise for brighter unlit colors (e.g., 1.8–2.2)
-GROUND_DRONE_COLOUR     = tuple(_cfg["GROUND_DRONE_COLOUR"])
-HELICOPTER_DRONE_COLOUR = tuple(_cfg["HELICOPTER_DRONE_COLOUR"])
 RENDER_OUTPUT_DIR       = _cfg["RENDER_OUTPUT_DIR"]
 
 
@@ -110,6 +108,13 @@ _shot_name = _argv[0]
 _shot_config_path = os.path.join(_config_dir, f"{_shot_name}.json")
 with open(_shot_config_path, "r") as _f:
     _shot = json.load(_f)
+
+TIME_OF_DAY = _shot.get("TIME_OF_DAY", "day").lower()
+if TIME_OF_DAY not in {"day", "night"}:
+    raise ValueError(f"Shot config TIME_OF_DAY must be 'day' or 'night'; got {TIME_OF_DAY!r}")
+
+GROUND_DRONE_COLOUR = tuple(_cfg[f"{TIME_OF_DAY.upper()}_GROUND_DRONE_COLOUR"])
+HELICOPTER_DRONE_COLOUR = tuple(_cfg[f"{TIME_OF_DAY.upper()}_HELICOPTER_DRONE_COLOUR"])
 
 
 def build_entities_from_config(shot_config):
@@ -149,13 +154,15 @@ _colour_map = {
     "HELICOPTER_DRONE_COLOUR": HELICOPTER_DRONE_COLOUR,
 }
 
+PATH_COLOUR = (1.0, 0.45, 0.08, 1.0)
+
 def make_text(name, body, colour, emission_strength=2.0):
     bpy.ops.object.text_add(location=(0, 0, 0), rotation=(0, 0, 0))
     obj = bpy.context.active_object
     obj.name = name
     obj.data.body = body
     obj.data.size = 0.002 * SCENE_SCALE
-    obj.data.extrude = PATH_THICKNESS*0.1
+    obj.data.extrude = PATH_THICKNESS*0.01
     obj.rotation_euler[0] = n090
     obj.rotation_euler[1] = n000
     obj.rotation_euler[2] = n090
@@ -197,7 +204,7 @@ def make_path(name, yz_points):
     curve = bpy.data.curves.new(name=name, type='CURVE')
     curve.dimensions = '3D'
     # make the path visible with thickness matching dots
-    curve.bevel_depth = PATH_THICKNESS
+    curve.bevel_depth = PATH_THICKNESS*0.1
     curve.bevel_resolution = 3
     curve.resolution_u = 12
     spline = curve.splines.new(type='BEZIER')
@@ -213,6 +220,36 @@ def make_path(name, yz_points):
 
     obj = bpy.data.objects.new(name + "_curve", curve)
     bpy.context.scene.collection.objects.link(obj)
+    obj.color = PATH_COLOUR
+
+    mat_name = f"{name}_mat"
+    mat = bpy.data.materials.get(mat_name)
+    if mat is None:
+        mat = bpy.data.materials.new(name=mat_name)
+        mat.use_nodes = True
+
+    nodes = mat.node_tree.nodes
+    links = mat.node_tree.links
+    for link in list(links):
+        links.remove(link)
+
+    out = next((node for node in nodes if node.type == 'OUTPUT_MATERIAL'), None)
+    if out is None:
+        out = nodes.new('ShaderNodeOutputMaterial')
+
+    emission = next((node for node in nodes if node.type == 'EMISSION'), None)
+    if emission is None:
+        emission = nodes.new('ShaderNodeEmission')
+
+    emission.inputs['Color'].default_value = PATH_COLOUR
+    emission.inputs['Strength'].default_value = 1.6
+    links.new(emission.outputs['Emission'], out.inputs['Surface'])
+
+    if len(obj.data.materials) == 0:
+        obj.data.materials.append(mat)
+    else:
+        obj.data.materials[0] = mat
+
     # Hide curve from final render but keep it in viewport
     obj.hide_render = True
     return obj
