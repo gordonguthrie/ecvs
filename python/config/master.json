@@ -1,11 +1,13 @@
 {
     "SCENE_SCALE": 1.0,
     "DOT_X": 0.2,
-    "PATH_X": 0.1,
-    "VIEW_TRANSFORM": "Standard",
-    "VIEW_LOOK": "Medium High Contrast",
-    "VIEW_EXPOSURE": 0.25,
-    "MAP_EMISSION_STRENGTH": 1.7,
-    "GROUND_DRONE_COLOUR": [1.0, 0.0, 0.0, 1.0],
-    "HELICOPTER_DRONE_COLOUR": [0.0, 0.0, 1.0, 1.0]
+    "PATH_X": 0.0000001,
+    "RENDER_OUTPUT_DIR": "/Volumes/Extreme SSD/Renders/Animated Maps/",
+    "MAP_EMISSION_STRENGTH": 1.0,
+    "GROUND_DRONE_COLOUR": [0.01, 0.01, 1.0, 1.0],
+    "HELICOPTER_DRONE_COLOUR": [1.0, 0.01, 0.01, 1.0],
+    "DAY_GROUND_DRONE_COLOUR": [0.01, 0.01, 1.0, 1.0],
+    "NIGHT_GROUND_DRONE_COLOUR": [0.1, 0.1, 1.0, 1.0],
+    "DAY_HELICOPTER_DRONE_COLOUR": [1.0, 0.01, 0.01, 1.0],
+    "NIGHT_HELICOPTER_DRONE_COLOUR": [1.0, 0.01, 0.01, 1.0]
 }

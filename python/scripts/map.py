@@ -8,13 +8,12 @@ import sys
 
 from bpy_extras import image_utils
 
-# set the output path
-
-bpy.data.scenes["Scene"].render.filepath = "/Volumes/Extreme SSD/Renders/Animated Maps/"
+# set the output path after config/shot are loaded
 
 # Color management and material helpers
 def set_vivid_color_management(view_transform='Standard', look='Medium High Contrast', exposure=0.25):
     scene = bpy.context.scene
+    scene.display_settings.display_device = 'sRGB'
     vs = scene.view_settings
     try:
         vs.view_transform = view_transform
@@ -23,9 +22,11 @@ def set_vivid_color_management(view_transform='Standard', look='Medium High Cont
         vs.view_transform = 'Filmic'
     vs.look = look
     vs.exposure = exposure
+    if hasattr(vs, "gamma"):
+        vs.gamma = 1.0
 
 def make_image_plane_vivid(image_name, emission_strength=1.5):
-    # Find the material that uses the given image, then drive Emission for unlit vivid colors
+    # Rebuild the imported plane material as emission-only so lighting cannot dull the image
     target_img = bpy.data.images.get(image_name)
     if not target_img:
         return
@@ -33,27 +34,29 @@ def make_image_plane_vivid(image_name, emission_strength=1.5):
         if not mat.use_nodes:
             continue
         nodes = mat.node_tree.nodes
-        links = mat.node_tree.links
-        img_nodes = [n for n in nodes if n.type == 'TEXT_IMAGE' and n.image == target_img]
+        img_nodes = [n for n in nodes if n.type == 'TEX_IMAGE' and n.image == target_img]
         if not img_nodes:
             continue
-        img_node = img_nodes[0]
-        # Ensure we have an output and an emission shader
-        out = next((n for n in nodes if n.type == 'OUTPUT_MATERIAL'), None)
-        if out is None:
-            out = nodes.new('ShaderNodeOutputMaterial')
-        emission = next((n for n in nodes if n.type == 'EMISSION'), None)
-        if emission is None:
-            emission = nodes.new('ShaderNodeEmission')
-        emission.inputs['Strength'].default_value = emission_strength
-        # Link image color -> emission color, emission -> output
         try:
-            links.new(img_node.outputs['Color'], emission.inputs['Color'])
+            target_img.colorspace_settings.name = 'sRGB'
         except Exception:
             pass
-        # If there's an existing BSDF, we can bypass it for a pure unlit look
+
+        nodes.clear()
+        links = mat.node_tree.links
+
+        tex = nodes.new('ShaderNodeTexImage')
+        tex.image = target_img
+        tex.interpolation = 'Linear'
+
+        emission = nodes.new('ShaderNodeEmission')
+        emission.inputs['Strength'].default_value = emission_strength
+
+        out = nodes.new('ShaderNodeOutputMaterial')
+
+        links.new(tex.outputs['Color'], emission.inputs['Color'])
         links.new(emission.outputs['Emission'], out.inputs['Surface'])
-        # Optional: set blend mode to opaque to avoid unintended alpha darkening
+
         mat.blend_method = 'OPAQUE'
         break
 
@@ -78,20 +81,18 @@ with open(_config_path, "r") as _f:
     _cfg = json.load(_f)
 
 SCENE_SCALE             = _cfg["SCENE_SCALE"]
-PATH_THICKNESS          = 0.001 * SCENE_SCALE
+PATH_THICKNESS          = 0.003 * SCENE_SCALE
 DOT_X                   = _cfg["DOT_X"]
 PATH_X                  = _cfg["PATH_X"]
 
 # ---- Render/preview tuning (simple parameters) ----
-# Color management
-VIEW_TRANSFORM          = _cfg["VIEW_TRANSFORM"]    # fallback to 'Filmic' if unavailable
-VIEW_LOOK               = _cfg["VIEW_LOOK"]
-VIEW_EXPOSURE           = _cfg["VIEW_EXPOSURE"]
+# Color management (forced)
+VIEW_TRANSFORM          = "Standard"
+VIEW_LOOK               = "None"
+VIEW_EXPOSURE           = 0.0
 
 MAP_EMISSION_STRENGTH   = _cfg["MAP_EMISSION_STRENGTH"]   # raise for brighter unlit colors (e.g., 1.8–2.2)
-
-GROUND_DRONE_COLOUR     = tuple(_cfg["GROUND_DRONE_COLOUR"])
-HELICOPTER_DRONE_COLOUR = tuple(_cfg["HELICOPTER_DRONE_COLOUR"])
+RENDER_OUTPUT_DIR       = _cfg["RENDER_OUTPUT_DIR"]
 
 
 # Shot config — name passed after '--' on the Blender command line, e.g.:
@@ -108,13 +109,52 @@ _shot_config_path = os.path.join(_config_dir, f"{_shot_name}.json")
 with open(_shot_config_path, "r") as _f:
     _shot = json.load(_f)
 
+TIME_OF_DAY = _shot.get("TIME_OF_DAY", "day").lower()
+if TIME_OF_DAY not in {"day", "night"}:
+    raise ValueError(f"Shot config TIME_OF_DAY must be 'day' or 'night'; got {TIME_OF_DAY!r}")
+
+GROUND_DRONE_COLOUR = tuple(_cfg[f"{TIME_OF_DAY.upper()}_GROUND_DRONE_COLOUR"])
+HELICOPTER_DRONE_COLOUR = tuple(_cfg[f"{TIME_OF_DAY.upper()}_HELICOPTER_DRONE_COLOUR"])
+
+
+def build_entities_from_config(shot_config):
+    if "entities" in shot_config:
+        return shot_config["entities"]
+
+    devices = shot_config.get("devices", [])
+    paths = shot_config.get("paths", [])
+
+    if len(devices) != len(paths):
+        raise ValueError(
+            f"Shot config has {len(devices)} devices but {len(paths)} paths; they must match"
+        )
+
+    entities = []
+    for device, path_entry in zip(devices, paths):
+        if not isinstance(path_entry, dict) or len(path_entry) != 1:
+            raise ValueError(
+                f"Each path entry must be a single-key object like {{\"path_1\": [[...]]}}; got {path_entry}"
+            )
+        _, yz_points = next(iter(path_entry.items()))
+        entity = dict(device)
+        entity["path"] = yz_points
+        entities.append(entity)
+
+    return entities
+
+_render_base = os.path.abspath(RENDER_OUTPUT_DIR)
+bpy.data.scenes["Scene"].render.filepath = os.path.join(_render_base, _shot_name)
+
 MAP_IMAGE_NAME = _shot["MAP_IMAGE_NAME"]
 CLIP_LENGTH    = _shot["CLIP_LENGTH"]
+ENTITIES       = build_entities_from_config(_shot)
 
 _colour_map = {
     "GROUND_DRONE_COLOUR":     GROUND_DRONE_COLOUR,
     "HELICOPTER_DRONE_COLOUR": HELICOPTER_DRONE_COLOUR,
 }
+
+PATH_COLOUR = (1.0, 0.45, 0.08, 1.0)
 
 def make_text(name, body, colour, emission_strength=2.0):
     bpy.ops.object.text_add(location=(0, 0, 0), rotation=(0, 0, 0))
@@ -122,7 +162,7 @@ def make_text(name, body, colour, emission_strength=2.0):
     obj.name = name
     obj.data.body = body
     obj.data.size = 0.002 * SCENE_SCALE
-    obj.data.extrude = PATH_THICKNESS*0.1
+    obj.data.extrude = PATH_THICKNESS*0.01
     obj.rotation_euler[0] = n090
     obj.rotation_euler[1] = n000
     obj.rotation_euler[2] = n090
@@ -133,12 +173,10 @@ def make_text(name, body, colour, emission_strength=2.0):
     if mat is None:
         mat = bpy.data.materials.new(name=mat_name)
         mat.use_nodes = True
-    bsdf = mat.node_tree.nodes.get("Principled BSDF")
-    if bsdf:
-        bsdf.inputs[0].default_value = colour
-    # Add Emission shader and combine with BSDF for vivid text
     nodes = mat.node_tree.nodes
     links = mat.node_tree.links
+    for link in list(links):
+        links.remove(link)
     # Ensure output node exists
     out = next((n for n in nodes if n.type == 'OUTPUT_MATERIAL'), None)
     if out is None:
@@ -148,19 +186,8 @@ def make_text(name, body, colour, emission_strength=2.0):
         emission = nodes.new('ShaderNodeEmission')
     emission.inputs['Color'].default_value = colour
     emission.inputs['Strength'].default_value = emission_strength
-    add_shader = next((n for n in nodes if n.type == 'ADD_SHADER'), None)
-    if add_shader is None:
-        add_shader = nodes.new('ShaderNodeAddShader')
-    if bsdf:
-        try:
-            links.new(bsdf.outputs['BSDF'], add_shader.inputs[0])
-        except Exception:
-            pass
-    try:
-        links.new(emission.outputs['Emission'], add_shader.inputs[1])
-    except Exception:
-        pass
-    links.new(add_shader.outputs['Shader'], out.inputs['Surface'])
+    links.new(emission.outputs['Emission'], out.inputs['Surface'])
+    mat.blend_method = 'OPAQUE'
     # Assign/replace material slot 0
     if len(obj.data.materials) == 0:
         obj.data.materials.append(mat)
@@ -177,7 +204,7 @@ def make_path(name, yz_points):
     curve = bpy.data.curves.new(name=name, type='CURVE')
     curve.dimensions = '3D'
     # make the path visible with thickness matching dots
-    curve.bevel_depth = PATH_THICKNESS
+    curve.bevel_depth = PATH_THICKNESS*0.1
     curve.bevel_resolution = 3
     curve.resolution_u = 12
     spline = curve.splines.new(type='BEZIER')
@@ -193,6 +220,36 @@ def make_path(name, yz_points):
 
     obj = bpy.data.objects.new(name + "_curve", curve)
     bpy.context.scene.collection.objects.link(obj)
+    obj.color = PATH_COLOUR
+
+    mat_name = f"{name}_mat"
+    mat = bpy.data.materials.get(mat_name)
+    if mat is None:
+        mat = bpy.data.materials.new(name=mat_name)
+        mat.use_nodes = True
+
+    nodes = mat.node_tree.nodes
+    links = mat.node_tree.links
+    for link in list(links):
+        links.remove(link)
+
+    out = next((node for node in nodes if node.type == 'OUTPUT_MATERIAL'), None)
+    if out is None:
+        out = nodes.new('ShaderNodeOutputMaterial')
+
+    emission = next((node for node in nodes if node.type == 'EMISSION'), None)
+    if emission is None:
+        emission = nodes.new('ShaderNodeEmission')
+
+    emission.inputs['Color'].default_value = PATH_COLOUR
+    emission.inputs['Strength'].default_value = 1.6
+    links.new(emission.outputs['Emission'], out.inputs['Surface'])
+
+    if len(obj.data.materials) == 0:
+        obj.data.materials.append(mat)
+    else:
+        obj.data.materials[0] = mat
+
     # Hide curve from final render but keep it in viewport
     obj.hide_render = True
     return obj
@@ -264,6 +321,7 @@ bpy.data.scenes["Scene"].render.resolution_x=3840
 bpy.data.scenes["Scene"].render.resolution_y=2160
 bpy.data.scenes["Scene"].frame_end=CLIP_LENGTH
 bpy.data.scenes["Scene"].render.image_settings.media_type='VIDEO'
+bpy.data.scenes["Scene"].render.use_overwrite = True
 
 # general parameters
 animation = range(0,CLIP_LENGTH)
@@ -271,7 +329,7 @@ starting_angle=90
 diff=0.172078312
 
 # create number text and paths from shot config, then animate
-for i, entity in enumerate(_shot["entities"], start=1):
+for i, entity in enumerate(ENTITIES, start=1):
     colour = _colour_map[entity["colour"]]
     num_text = make_text(f"text_{i}", entity["label"], colour)
     path_obj = make_path(f"path text{i}", entity["path"])
@@ -282,4 +340,6 @@ for i, entity in enumerate(_shot["entities"], start=1):
 
 # pack all outputs into the file and save output
 bpy.ops.file.pack_all()
-bpy.ops.wm.save_as_mainfile(filepath="./outputs/map.blend")
+_blend_path = os.path.join("./outputs", f"map_{_shot_name}.blend")
+bpy.context.preferences.filepaths.save_version = 0
+bpy.ops.wm.save_as_mainfile(filepath=_blend_path, check_existing=False)

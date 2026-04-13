@@ -1,0 +1,25 @@
+{
+    "MAP_IMAGE_NAME": "edinburgh_midnight_blue_800-13.0-9.0_shot_4.png",
+    "CLIP_LENGTH": 34,
+    "TIME_OF_DAY": "night",
+    "devices": [
+        {"label": "9815", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "3323", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "1975", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "1492", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "2034", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "2845", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "3580", "colour": "GROUND_DRONE_COLOUR"}
+    
+    ],
+    "paths":
+[
+    {"path": [[-0.049, 0.004], [-0.044, 0.001]]},
+    {"path": [[-0.002, 0.003], [-0.007, 0.001]]},
+    {"path": [[0.012, 0.028], [0.007, 0.024]]},
+    {"path": [[0.037, -0.039], [0.032, -0.026]]},
+    {"path": [[-0.010, 0.023], [-0.016, 0.019]]},
+    {"path": [[-0.025, 0.014], [-0.023, 0.008]]},
+    {"path": [[-0.044, -0.020], [-0.037, -0.019]]}
+]
+}

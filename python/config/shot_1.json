@@ -1,11 +1,47 @@
 {
-    "MAP_IMAGE_NAME": "edinburgh_forest_800_130_90.png",
-    "CLIP_LENGTH": 144,
-    "entities": [
-        {"label": "\ud83dude9a5498", "colour": "GROUND_DRONE_COLOUR",     "path": [[0.01,   0.00],  [0.01,   -0.008], [0.0,    -0.009]]},
-        {"label": "\ud83dude9a3341", "colour": "GROUND_DRONE_COLOUR",     "path": [[0.03,   0.01],  [0.032,   0.006], [0.034,   0.012]]},
-        {"label": "\ud83dude9a0440", "colour": "GROUND_DRONE_COLOUR",     "path": [[-0.01, -0.00],  [-0.012, -0.002], [-0.018, -0.003]]},
-        {"label": "\ud83dude81198",  "colour": "HELICOPTER_DRONE_COLOUR", "path": [[0.02,   0.01],  [0.0,    -0.003]]},
-        {"label": "\ud83dude81379",  "colour": "HELICOPTER_DRONE_COLOUR", "path": [[-0.01, -0.02],  [-0.04,  -0.009]]}
-    ]
-}
+    "MAP_IMAGE_NAME": "edinburgh_midnight_blue_4500-13.0-9.0_shot_1.png",
+    "CLIP_LENGTH": 60,
+    "TIME_OF_DAY": "night",
+    "devices": [
+        {"label": "3323", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "2485", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "9825", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "1686", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "7490", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "8421", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "3580", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "1245", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "9656", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "2034", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "1975", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "1584", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "4116", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "4963", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "1492", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "8601", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "6345", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "8217", "colour": "GROUND_DRONE_COLOUR"}
+
+    ],
+    "paths":
+[
+    {"path": [[0.004, 0.008], [0.004, 0.008]]},
+    {"path": [[-0.025, 0.026], [-0.026, 0.026]]},
+    {"path": [[-0.056, 0.006], [-0.056, 0.006]]},
+    {"path": [[0.039, 0.007], [0.039, 0.007]]},
+    {"path": [[0.030, -0.031], [0.031, -0.030]]},
+    {"path": [[-0.030, -0.029], [-0.029, -0.029]]},
+    {"path": [[-0.057, -0.009], [-0.058, -0.009]]},
+    {"path": [[-0.057, -0.037], [-0.056, -0.037]]},
+    {"path": [[-0.037, 0.041], [-0.036, 0.041]]},
+    {"path": [[0.018, 0.026], [0.018, 0.027]]},
+    {"path": [[0.002, 0.023], [0.001, 0.025]]},
+    {"path": [[0.067, -0.013], [0.068, -0.013]]},
+    {"path": [[-0.063, 0.025], [-0.062, 0.025]]},
+    {"path": [[-0.027, 0.011], [-0.026, 0.011]]},
+    {"path": [[0.010, -0.006], [0.010, -0.005]]},
+    {"path": [[0.044, 0.025], [0.043, 0.025]]},
+    {"path": [[-0.010, 0.040], [-0.011, 0.040]]},
+    {"path": [[-0.004, -0.040], [-0.004, -0.039]]}
+]
+    }
