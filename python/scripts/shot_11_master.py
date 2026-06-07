@@ -84,7 +84,7 @@ VIEW_EXPOSURE  = 0.25
 
 # Map material vividness
 # MAP_IMAGE_NAME          = 'edinburgh_midnight_blue_800_130_90.png'
- MAP_IMAGE_NAME        = 'edinburgh_forest_800_130_90.png'
+MAP_IMAGE_NAME        = 'edinburgh_forest_800_130_90.png'
 # MAP_IMAGE_NAME        = 'edinburgh_contrast_zones_2400_130_90.png'
 MAP_EMISSION_STRENGTH   = 1.7   # raise for brighter unlit colors (e.g., 1.8–2.2)
 
@@ -188,10 +188,16 @@ def attach_and_animate_on_path(obj, path_obj, start_frame=None, end_frame=None, 
     c.use_curve_follow = follow_orientation
     # Use normalized progression along the curve independent of eval_time
     c.use_fixed_location = True
-    c.offset_factor = 0.0
-    c.keyframe_insert(data_path="offset_factor", frame=start_frame)
-    c.offset_factor = 1.0
-    c.keyframe_insert(data_path="offset_factor", frame=end_frame)
+    edit_prefs = bpy.context.preferences.edit
+    previous_interpolation = edit_prefs.keyframe_new_interpolation_type
+    try:
+        edit_prefs.keyframe_new_interpolation_type = 'LINEAR'
+        c.offset_factor = 0.0
+        c.keyframe_insert(data_path="offset_factor", frame=start_frame)
+        c.offset_factor = 1.0
+        c.keyframe_insert(data_path="offset_factor", frame=end_frame)
+    finally:
+        edit_prefs.keyframe_new_interpolation_type = previous_interpolation
 
 # Start the procedural stuff
 
@@ -235,10 +241,13 @@ light.rotation_euler[1] = n090
 light.rotation_euler[2] = 0.0
 
 # set up output
-bpy.data.scenes["Scene"].render.resolution_x=3840
-bpy.data.scenes["Scene"].render.resolution_y=2160
-bpy.data.scenes["Scene"].frame_end=CLIP_LENGTH
-bpy.data.scenes["Scene"].render.image_settings.media_type='VIDEO'
+scene = bpy.data.scenes["Scene"]
+scene.render.engine = 'CYCLES'
+scene.cycles.device = 'CPU'
+scene.render.resolution_x=3840
+scene.render.resolution_y=2160
+scene.frame_end=CLIP_LENGTH
+scene.render.image_settings.media_type='VIDEO'
 
 # general parameters
 animation = range(0,CLIP_LENGTH)

@@ -143,7 +143,7 @@ def build_entities_from_config(shot_config):
     return entities
 
 _render_base = os.path.abspath(RENDER_OUTPUT_DIR)
-bpy.data.scenes["Scene"].render.filepath = os.path.join(_render_base, _shot_name)
+bpy.data.scenes["Scene"].render.filepath = os.path.join(_render_base, _shot_name + "_2")
 
 MAP_IMAGE_NAME = _shot["MAP_IMAGE_NAME"]
 CLIP_LENGTH    = _shot["CLIP_LENGTH"]
@@ -270,10 +270,16 @@ def attach_and_animate_on_path(obj, path_obj, start_frame=None, end_frame=None, 
     c.use_curve_follow = follow_orientation
     # Use normalized progression along the curve independent of eval_time
     c.use_fixed_location = True
-    c.offset_factor = 0.0
-    c.keyframe_insert(data_path="offset_factor", frame=start_frame)
-    c.offset_factor = 1.0
-    c.keyframe_insert(data_path="offset_factor", frame=end_frame)
+    edit_prefs = bpy.context.preferences.edit
+    previous_interpolation = edit_prefs.keyframe_new_interpolation_type
+    try:
+        edit_prefs.keyframe_new_interpolation_type = 'LINEAR'
+        c.offset_factor = 0.0
+        c.keyframe_insert(data_path="offset_factor", frame=start_frame)
+        c.offset_factor = 1.0
+        c.keyframe_insert(data_path="offset_factor", frame=end_frame)
+    finally:
+        edit_prefs.keyframe_new_interpolation_type = previous_interpolation
 
 # Start the procedural stuff
 
@@ -317,11 +323,14 @@ light.rotation_euler[1] = n090
 light.rotation_euler[2] = 0.0
 
 # set up output
-bpy.data.scenes["Scene"].render.resolution_x=3840
-bpy.data.scenes["Scene"].render.resolution_y=2160
-bpy.data.scenes["Scene"].frame_end=CLIP_LENGTH
-bpy.data.scenes["Scene"].render.image_settings.media_type='VIDEO'
-bpy.data.scenes["Scene"].render.use_overwrite = True
+scene = bpy.data.scenes["Scene"]
+# scene.render.engine = 'CYCLES'
+# scene.cycles.device = 'CPU'
+scene.render.resolution_x=3840
+scene.render.resolution_y=2160
+scene.frame_end=CLIP_LENGTH
+scene.render.image_settings.media_type='VIDEO'
+scene.render.use_overwrite = True
 
 # general parameters
 animation = range(0,CLIP_LENGTH)
@@ -340,6 +349,6 @@ for i, entity in enumerate(ENTITIES, start=1):
 
 # pack all outputs into the file and save output
 bpy.ops.file.pack_all()
-_blend_path = os.path.join("./outputs", f"map_{_shot_name}.blend")
+_blend_path = os.path.join("./outputs", f"map_{_shot_name}_2.blend")
 bpy.context.preferences.filepaths.save_version = 0
 bpy.ops.wm.save_as_mainfile(filepath=_blend_path, check_existing=False)

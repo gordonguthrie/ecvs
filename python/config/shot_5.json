@@ -1,6 +1,6 @@
 {
     "MAP_IMAGE_NAME": "edinburgh_ocean_4500-13.0-9.0_shot_5.png",
-    "CLIP_LENGTH": 28,
+    "CLIP_LENGTH": 27,
     "TIME_OF_DAY": "day",
     "devices": [
         {"label": "8411",  "colour": "HELICOPTER_DRONE_COLOUR"},

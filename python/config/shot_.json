@@ -1,6 +1,6 @@
 {
-    "MAP_IMAGE_NAME": "edinburgh_ocean_2400-13.0-9.0_shot_6.png",
-    "CLIP_LENGTH": 25,
+    "MAP_IMAGE_NAME": "edinburgh_contrast_zones_4500-13.0-9.0_shot_.png",
+    "CLIP_LENGTH": 60,
     "TIME_OF_DAY": "day",
     "devices": [
         {"label": "8411",  "colour": "HELICOPTER_DRONE_COLOUR"},
@@ -16,45 +16,26 @@
         {"label": "8316",  "colour": "HELICOPTER_DRONE_COLOUR"},
         {"label": "5970",  "colour": "HELICOPTER_DRONE_COLOUR"},
 
+        {"label": "3323", "colour": "GROUND_DRONE_COLOUR"},
         {"label": "2485", "colour": "GROUND_DRONE_COLOUR"},
         {"label": "9825", "colour": "GROUND_DRONE_COLOUR"},
-        {"label": "3323", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "1686", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "7490", "colour": "GROUND_DRONE_COLOUR"},
         {"label": "8421", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "3580", "colour": "GROUND_DRONE_COLOUR"},
         {"label": "1245", "colour": "GROUND_DRONE_COLOUR"},
         {"label": "9656", "colour": "GROUND_DRONE_COLOUR"},
         {"label": "2034", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "1975", "colour": "GROUND_DRONE_COLOUR"},
         {"label": "1584", "colour": "GROUND_DRONE_COLOUR"},
         {"label": "4116", "colour": "GROUND_DRONE_COLOUR"},
+        {"label": "4963", "colour": "GROUND_DRONE_COLOUR"},
         {"label": "1492", "colour": "GROUND_DRONE_COLOUR"},
         {"label": "8601", "colour": "GROUND_DRONE_COLOUR"},
         {"label": "6345", "colour": "GROUND_DRONE_COLOUR"},
         {"label": "8217", "colour": "GROUND_DRONE_COLOUR"}
+
     ],
     "paths":
-[
-    {"path": [[0.025, 0.027], [0.018, 0.024]]},
-    {"path": [[0.027, 0.025], [0.021, 0.022]]},
-    {"path": [[0.029, 0.023], [0.023, 0.019]]},
-    {"path": [[-0.022, -0.012], [-0.017, -0.007]]},
-    {"path": [[-0.020, -0.011], [-0.014, -0.007]]},
-    {"path": [[-0.022, -0.009], [-0.019, -0.002]]},
-    {"path": [[0.072, 0.026], [0.063, 0.025]]},
-    {"path": [[0.070, 0.030], [0.062, 0.028]]},
-    {"path": [[0.072, 0.029], [0.064, 0.022]]},
-    {"path": [[-0.037, 0.017], [-0.029, 0.013]]},
-    {"path": [[-0.034, 0.018], [-0.026, 0.014]]},
-    {"path": [[-0.030, 0.019], [-0.020, 0.018]]},
-    {"path": [[-0.021, 0.004], [-0.019, 0.004]]},
-    {"path": [[-0.009, -0.003], [-0.007, -0.002]]},
-    {"path": [[-0.010, 0.006], [-0.012, 0.006]]},
-    {"path": [[-0.003, 0.005], [-0.005, 0.004]]},
-    {"path": [[-0.001, 0.001], [-0.004, 0.001]]},
-    {"path": [[-0.015, -0.002], [-0.014, -0.001]]},
-    {"path": [[0.013, 0.003], [0.011, 0.003]]},
-    {"path": [[-0.017, 0.006], [-0.015, 0.006]]},
-    {"path": [[-0.007, 0.034], [-0.008, 0.037]]},
-    {"path": [[0.030, -0.003], [0.027, -0.005]]},
-    {"path": [[-0.061, -0.012], [-0.064, -0.011]]},
-    {"path": [[0.021, -0.021], [0.022, -0.023]]},
-    {"path": [[-0.062, 0.028], [-0.063, 0.031]]}
-]}
+
+    }
